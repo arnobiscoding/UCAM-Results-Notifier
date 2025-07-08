@@ -247,4 +247,4 @@ MIT License - feel free to use and modify as needed.
 
 ---
 
-Made with ❤️ for UCAM students who want instant result notifications! 
+Made with ❤️ for UIU students who want instant result notifications! 
