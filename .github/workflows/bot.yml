@@ -39,10 +39,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
+          PYTHONUNBUFFERED: "1"
         run: |
           echo "Starting UCAM Results Notifier Bot..."
           echo "Bot will run for up to 5.5 hours, then exit gracefully for next scheduled run."
-          python bot_v1.py
+          python -u bot_v1.py
           echo "Bot completed successfully."
       
       - name: Notify on failure
