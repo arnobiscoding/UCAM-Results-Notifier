@@ -51,6 +51,13 @@ start_time = time.time()
 
 BASE_URL = 'https://ucam.uiu.ac.bd'
 
+# Store credentials for re-login if session expires
+USER_ID = os.getenv('USER_ID')
+PASSWORD = os.getenv('PASSWORD')
+if not USER_ID or not PASSWORD:
+    print("ERROR: USER_ID and PASSWORD not found in environment variables.")
+    sys.exit(1)
+
 def send_telegram_message(message):
     url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
     data = {'chat_id': TELEGRAM_CHAT_ID, 'text': message, 'parse_mode': 'HTML'}
@@ -116,6 +123,19 @@ def login_ucam(session, user_id, password, max_retries=3):
                 return False
             time.sleep(2)
 
+def is_session_valid():
+    """Check if current session is still valid by attempting a request."""
+    try:
+        url = f'{BASE_URL}/Student/StudentCourseHistory.aspx'
+        if mmi_parameter:
+            url += f'?mmi={mmi_parameter}'
+        response = session.get(url, timeout=10, allow_redirects=True)
+        if response.status_code == 404 or 'login' in response.url.lower():
+            return False
+        return response.status_code == 200
+    except Exception:
+        return False
+
 def with_retries(task_fn, max_retries=3, delay=2, *args, **kwargs):
     """Generic retry helper for any task."""
     for attempt in range(1, max_retries + 1):
@@ -127,10 +147,18 @@ def with_retries(task_fn, max_retries=3, delay=2, *args, **kwargs):
                 raise
             time.sleep(delay)
 
-def get_table_html():
+def get_table_html(force_fresh=True):
     """Fetch the course history page and extract table HTML."""
     global mmi_parameter
     try:
+        # Check if we need to re-login
+        if force_fresh or not is_session_valid():
+            print("🔄 Session expired or invalid. Re-logging in...")
+            if login_ucam(session, USER_ID, PASSWORD):
+                print("✅ Re-login successful!")
+            else:
+                raise Exception("Re-login failed")
+        
         # Navigate to the course history page with mmi parameter if available
         url = f'{BASE_URL}/Student/StudentCourseHistory.aspx'
         if mmi_parameter:
@@ -281,9 +309,6 @@ def get_message_for_course(course, grade, point):
     return message
 
 # --- Main Execution ---
-USER_ID = os.getenv('USER_ID')
-PASSWORD = os.getenv('PASSWORD')
-
 if not login_ucam(session, USER_ID, PASSWORD):
     mongo_client.close()
     sys.exit(1)
