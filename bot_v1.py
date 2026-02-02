@@ -12,7 +12,7 @@ import json
 import os
 import requests
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
@@ -166,7 +166,7 @@ def save_bot_state(running_courses, notified_courses):
                 '$set': {
                     'running_courses': running_courses,
                     'notified_courses': notified_courses,
-                    'last_updated': datetime.now().isoformat()
+                    'last_updated': (datetime.utcnow() + timedelta(hours=6)).replace(tzinfo=None).isoformat() + '+06:00'
                 }
             },
             upsert=True
