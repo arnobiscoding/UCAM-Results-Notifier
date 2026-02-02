@@ -2,7 +2,8 @@ name: UCAM Results Notifier Bot
 
 on:
   schedule:
-    # Run every 6 hours (0, 6, 12, 18 UTC)
+    # Run every 6 hours (Dhaka time GMT+6): 6am, 12pm, 6pm, midnight
+    # Cron times are in UTC, so we use: 0 (6am+6), 6 (12pm+6), 12 (6pm+6), 18 (midnight+6)
     - cron: '0 0,6,12,18 * * *'
   workflow_dispatch:  # Allow manual trigger
 
