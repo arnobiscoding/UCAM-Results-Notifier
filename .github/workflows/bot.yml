@@ -1,0 +1,62 @@
+name: UCAM Results Notifier Bot
+
+on:
+  schedule:
+    # Run every 6 hours (0, 6, 12, 18 UTC)
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours max
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Install Chrome dependencies (for Selenium)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+      
+      - name: Run UCAM Results Notifier Bot
+        env:
+          USER_ID: ${{ secrets.USER_ID }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: |
+          echo "Starting UCAM Results Notifier Bot..."
+          echo "Bot will run for up to 5.5 hours, then exit gracefully for next scheduled run."
+          python bot_v1.py
+          echo "Bot completed successfully."
+      
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -c "
+          import requests
+          url = f'https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage'
+          data = {
+            'chat_id': '${{ secrets.TELEGRAM_CHAT_ID }}',
+            'text': '❌ UCAM Bot Failed!\n\nWorkflow run failed. Check GitHub Actions logs.',
+            'parse_mode': 'HTML'
+          }
+          requests.post(url, data=data)
+          "

@@ -7,7 +7,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from bs4 import BeautifulSoup
-from lxml import etree
 import sys
 import json
 import os
@@ -27,7 +26,7 @@ options.add_argument('--start-maximized')  # Starts the browser maximized
 options.add_argument('--disable-gpu')  # Disables GPU hardware acceleration (useful for some environments)
 options.add_argument('--no-sandbox')  # Bypass OS security model (useful for CI environments)
 options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-options.add_argument('--headless')  # Uncomment to run in headless mode (no browser UI)
+# options.add_argument('--headless')  # Uncomment to run in headless mode (no browser UI)
 
 # Set up the driver using webdriver-manager
 service = Service(ChromeDriverManager().install())
@@ -127,15 +126,23 @@ try:
     # Table reading with retries
     table_html = with_retries(get_table_html, 3, 2)
 
+    if table_html is None:
+        raise ValueError("Failed to retrieve table HTML.")
+
     # Parse and print the table in a structured way
     soup = BeautifulSoup(table_html, 'lxml')
     rows = soup.find_all('tr')
-    headers = [th.get_text(strip=True) for th in rows[0].find_all('th')]
+    from bs4 import Tag
+    header_row = next((row for row in rows if isinstance(row, Tag) and row.find_all('th')), None)
+    if header_row is None:
+        raise ValueError("No header row found in table.")
+    headers = [th.get_text(strip=True) for th in header_row.find_all('th')]
     course_data = []
     for row in rows[1:]:
-        cols = [td.get_text(strip=True) for td in row.find_all('td')]
-        if cols:
-            course_data.append(dict(zip(headers, cols)))
+        if isinstance(row, Tag):
+            cols = [td.get_text(strip=True) for td in row.find_all('td')]
+            if cols:
+                course_data.append(dict(zip(headers, cols)))
 
     # Find running courses
     running_courses = [c for c in course_data if c.get('Course Status', '').lower() == 'running course']
@@ -258,7 +265,6 @@ try:
     print(f"Checked {len(saved_running_courses)} running courses. {len(updated_running_courses)} still pending.")
 except Exception as e:
     print(f"Error occurred: {e}")
-    send_telegram_message(f"❌ Bot Error: {str(e)}")
 finally:
     driver.quit()
 

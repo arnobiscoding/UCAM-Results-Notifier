@@ -68,3 +68,5 @@ chromedriver
 # Temporary files
 *.tmp
 *.temp
+
+upload_secrets.py
