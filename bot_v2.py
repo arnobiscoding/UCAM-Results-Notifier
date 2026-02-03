@@ -147,7 +147,7 @@ def with_retries(task_fn, max_retries=3, delay=2, *args, **kwargs):
                 raise
             time.sleep(delay)
 
-def get_table_html(force_fresh=True):
+def get_table_html(force_fresh=False):
     """Fetch the course history page and extract table HTML."""
     global mmi_parameter
     try:
